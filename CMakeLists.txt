@@ -23,3 +23,11 @@ target_include_directories(df_board PUBLIC runtime gen/arm gen/m68k host)
 
 add_executable(df_desktop host/df_main.cpp)
 target_link_libraries(df_desktop df_board df_gen df_board z)
+
+option(DF_PLAY "Build the SDL2 Linux game" OFF)
+if(DF_PLAY)
+  find_package(SDL2 REQUIRED)
+  add_executable(demonfront host/play.cpp)
+  target_link_libraries(demonfront PRIVATE df_board df_gen df_board z SDL2::SDL2)
+endif()
+
