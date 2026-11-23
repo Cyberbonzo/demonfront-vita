@@ -26,6 +26,11 @@ import m68k_isa as I
 import m68k_discover as D
 
 P = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Stage streaming, particles and sprite clipping use the same horizontal extent.
+WIDE_X = {0x112020: 464, 0x112214: 448, 0x112538: 448, 0x121050: 448,
+          0x121128: 448, 0x1211ee: 448, 0x12249c: 448, 0x1224a4: 448,
+          0x1225f4: 448, 0x1225fc: 448, 0x12274e: 448, 0x122756: 448,
+          0x123ac2: 448, 0x123aca: 448}
 OUT = os.path.join(P, 'gen', 'm68k')
 FUNCS_PER_FILE = 80
 CYCLES_PER_INSN = 8      # rough 68000 average, for the budget at backward branches
@@ -176,6 +181,9 @@ class Gen:
     # ---- instructions ----
     def insn(s, ins):
         op, sz, ops, pc = ins.op, ins.sz, ins.ops, ins.addr
+        if '--wide' in sys.argv and pc in WIDE_X:
+            assert ops[0].kind == 'imm' and ops[0].val == WIDE_X[pc]
+            ops = [I.Ea('imm', val=ops[0].val + 150), *ops[1:]]
         nxt = pc + ins.size
         if op == 'nop':
             return
@@ -436,6 +444,8 @@ def gen_func(f, known):
     g = Gen(f, known)
     body = g.run()
     out = prologue(fname(f.addr))
+    if '--wide' in sys.argv and f.addr == 0x10f684:
+        out.append('    m68k::stage_tick();')
     out.append('    DF_TRACE_68K(0x%06xu);' % f.addr)
     out.append('    const uint32_t link = c->link; (void)link;')
     out.append('    goto L_%06x;' % f.addr)

@@ -113,3 +113,10 @@ std::vector<std::pair<uint32_t, uint32_t>> take_pc_hist() {
     return v;
 }
 }
+
+namespace m68k {
+static uint64_t last_stage_tick;
+static bool seen_stage;
+void stage_tick() { last_stage_tick=sched::stats.frames; seen_stage=true; }
+bool stage_active() { return seen_stage && sched::stats.frames-last_stage_tick <= 6; }
+}

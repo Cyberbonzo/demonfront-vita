@@ -32,6 +32,16 @@ NATIVE = {0x08017ca0: 'semihosting (svc 0x123456)'}
 # Idle loops: backward branches where the ARM only waits for the 68000; taking them ends the ARM's slice.
 IDLE = {0x08000ffa: 'command wait: latch from the 68000 is not the next command'}
 
+# V105 widescreen immediates, at decoded instruction boundaries. The game builds
+# most widths with MOV #255 followed by ADD; the translator can emit larger immediates.
+WIDE = '--wide' in sys.argv
+WIDE_X = {
+    0x0800423c: 0xc1, 0x0800429a: 0xc1,  # object visibility
+    0x08009bc4: 0xc1, 0x08009f00: 0xb7, 0x08009f32: 0xb7,  # spawn and placement
+    0x0800afae: 0xc1, 0x0800aff0: 0xad, 0x0800b0a0: 0xa6,  # player and camera right limits
+    0x0800bf46: 0xc1, 0x0800c03a: 0xad,  # object placement at the edge
+}
+
 REG = {getattr(A, 'ARM_REG_R%d' % i): 'r%d' % i for i in range(13)}
 REG.update({A.ARM_REG_SP: 'sp', A.ARM_REG_LR: 'lr', A.ARM_REG_PC: 'pc'})
 REGS = ['r%d' % i for i in range(13)] + ['sp', 'lr']
@@ -64,7 +74,11 @@ class Gen:
         if op.type == A.ARM_OP_REG:
             return '0x%08xu' % pc if op.reg == A.ARM_REG_PC else REG[op.reg]
         if op.type == A.ARM_OP_IMM:
-            return '0x%xu' % (op.imm & 0xFFFFFFFF)
+            value = op.imm
+            if WIDE and pc in WIDE_X:
+                assert value == WIDE_X[pc], 'unexpected V105 instruction'
+                value += 150
+            return '0x%xu' % (value & 0xFFFFFFFF)
         raise Unsupported('operand')
 
     # flags
@@ -110,6 +124,11 @@ class Gen:
 
     def insn(s, ins):
         pc, mn, ops = ins.address, ins.mnemonic, ins.operands
+        if WIDE and pc == 0x0800b040:
+            # Camera tracking subtracts the target from both players, then averages.
+            assert mn == 'ldrh' and ins.op_str == 'r0, [r0]'
+            s.emit('r0 = arm::rd16(r0) + 75u;')
+            return
         if mn == 'adr':
             s.emit('%s = 0x%08xu;' % (r(ops[0]), (((pc + 4) & ~3) + ops[1].imm) & 0xFFFFFFFF))
             return

@@ -193,8 +193,21 @@ struct SpriteReader {
     }
 };
 
+#ifdef DF_WIDE
+static thread_local uint16_t* sprite_indices;
+const uint8_t* background_tiles(int& count) { count = bg_count; return bgpix.data(); }
+const uint8_t* text_tiles() { return txpix.data(); }
+#endif
+
 static inline void put(int x, int y, int p, uint16_t c) {
     if ((unsigned)x >= (unsigned)W) return;
+#ifdef DF_WIDE
+    if (sprite_indices) {
+        auto& dst = sprite_indices[y * W + x];
+        if (dst == 0xffff) dst = c | (p << 12);
+        return;
+    }
+#endif
     uint8_t& pr = pri[y][x];
     if (!(pr & 1)) {
         if (!p || !(pr & 2)) fb[y][x] = c;
@@ -265,6 +278,16 @@ static void draw_sprite(const Sprite& s, int y0, int y1) {
         }
     }
 }
+
+#ifdef DF_WIDE
+void sprite_layer(const Frame& f, uint16_t* indices) {
+    std::memset(indices, 0xff, W * H * sizeof(*indices));
+    sprite_indices = indices;
+    for (int i = f.nsprites - 1; i >= 0; --i)
+        if (!(f.ctrl & 0x2000) || f.sprites[i].pri) draw_sprite(f.sprites[i], 0, H);
+    sprite_indices = nullptr;
+}
+#endif
 
 void render(const Frame& f, uint32_t* rgba, int pitch, int y0, int y1) {
     for (int y = y0; y < y1; y++) {

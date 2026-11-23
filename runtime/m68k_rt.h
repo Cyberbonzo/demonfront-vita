@@ -22,6 +22,10 @@ namespace dftrace { void enter(int cpu, uint32_t addr); }
 #endif
 
 namespace m68k {
+// The translated stage tick marks live play; battery RAM can still describe the
+// previous session while the BIOS is booting.
+void stage_tick();
+bool stage_active();
 struct Ctx {
     uint32_t d[8], a[8];   // a[7] = the active stack pointer (the game always runs in supervisor mode)
     uint32_t usp;          // the other stack pointer (move usp)

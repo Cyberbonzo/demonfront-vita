@@ -6,7 +6,11 @@
 #include <string>
 
 namespace video {
+#ifdef DF_WIDE
+constexpr int W = 598, H = 224;
+#else
 constexpr int W = 448, H = 224;
+#endif
 
 struct Sprite {
     int x, y, w, h, color, flip, pri;
@@ -29,5 +33,11 @@ void latch_sprites();                     // vblank: decode the sprite buffer in
 void snapshot(Frame& f);                  // vblank: copy the current video state
 // draw lines y0..y1-1 of the W x H frame as 0xAABBGGRR; disjoint bands may run on different threads at once
 void render(const Frame& f, uint32_t* rgba, int pitch = W, int y0 = 0, int y1 = H);
-void render(uint32_t* rgba);              // snapshot + render (desktop convenience)
+void render(uint32_t* rgba);
+#ifdef DF_WIDE
+// Indexed sprite coverage for the HD compositor. Bit 12 marks sprites behind the background.
+const uint8_t* background_tiles(int& count);
+const uint8_t* text_tiles();
+void sprite_layer(const Frame& frame, uint16_t* indices);
+#endif              // snapshot + render (desktop convenience)
 }
