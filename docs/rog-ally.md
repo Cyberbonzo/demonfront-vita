@@ -19,3 +19,5 @@ The gameplay viewport spans 598 board columns. Verified V105 translation sites e
 Move with the D-pad or left stick, shoot with A, jump with B, and use the special with X or LB. Start begins free play. View toggles pause. Cabinet memory persists in `sram.bin`.
 
 The Valley regression run on the Ally covered 6,000 frames from boot, the character and stage screens, left movement to X=20, camera tracking at X=299, and right movement to X=578 in a locked encounter.
+
+See the [six-chapter test report](testes-fases-v105.md) for the per-map results and known widescreen defects.
