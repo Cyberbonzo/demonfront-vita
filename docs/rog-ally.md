@@ -20,4 +20,4 @@ Move with the D-pad or left stick, shoot with A, jump with B, and use the specia
 
 The Valley regression run on the Ally covered 6,000 frames from boot, the character and stage screens, left movement to X=20, camera tracking at X=299, and right movement to X=578 in a locked encounter.
 
-See the [six-chapter test report](testes-fases-v105.md) for the per-map results and known widescreen defects.
+See the [six-chapter test report](testes-fases-v105.md) for the before-and-after measurements, player bounds and nine boss transitions. Where the arcade art ends, the compositor continues terrain and panoramic layers using the original assets at the same scale.

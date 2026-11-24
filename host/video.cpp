@@ -195,6 +195,7 @@ struct SpriteReader {
 
 #ifdef DF_WIDE
 static thread_local uint16_t* sprite_indices;
+static thread_local int sprite_clip_left;
 const uint8_t* background_tiles(int& count) { count = bg_count; return bgpix.data(); }
 const uint8_t* text_tiles() { return txpix.data(); }
 #endif
@@ -203,6 +204,7 @@ static inline void put(int x, int y, int p, uint16_t c) {
     if ((unsigned)x >= (unsigned)W) return;
 #ifdef DF_WIDE
     if (sprite_indices) {
+        if (x < sprite_clip_left) return;
         auto& dst = sprite_indices[y * W + x];
         if (dst == 0xffff) dst = c | (p << 12);
         return;
@@ -280,11 +282,45 @@ static void draw_sprite(const Sprite& s, int y0, int y1) {
 }
 
 #ifdef DF_WIDE
-void sprite_layer(const Frame& f, uint16_t* indices) {
+// Some panoramic artwork is submitted through the sprite chip instead of the tilemap.
+// Only these scenery assets repeat. Paired cloud sheets together span a 672-pixel period.
+static void extend_panorama(const Sprite& s) {
+    int period;
+    bool reflect = false;
+    switch (s.offs) {
+    case 0x6bd38: case 0x6c87c: period = 672; break;
+    case 0x36cce: period = 192; break;
+    case 0x32848: case 0x315fc: period = 416; break;
+    case 0x575f3: case 0x5a23b: case 0x3d98f: case 0x6954c:
+    case 0x5cea5: case 0x19c29c:  // forest backdrop and full-screen attack flash
+        period = s.w * 16;
+        reflect = true;
+        break;
+    default: return;
+    }
+    if (period <= 0 || s.xzoom || s.y + s.h <= 0 || s.y >= H) return;
+    // The snow panorama is placed one pixel to the left by the board.
+    sprite_clip_left = 448;
+    if (s.offs == 0x575f3 && s.x + period == 447) sprite_clip_left = 447;
+    // The full-screen flash follows camera shake and may end a few pixels early.
+    if (s.offs == 0x19c29c) sprite_clip_left = s.x + period;
+    Sprite next = s;
+    for (next.x += period; next.x < W; next.x += period) {
+        if (reflect) next.flip ^= 1;
+        if (next.x + s.w * 16 > sprite_clip_left) draw_sprite(next, 0, H);
+    }
+    sprite_clip_left = 0;
+}
+
+void sprite_layer(const Frame& f, uint16_t* indices, bool stage) {
     std::memset(indices, 0xff, W * H * sizeof(*indices));
     sprite_indices = indices;
-    for (int i = f.nsprites - 1; i >= 0; --i)
-        if (!(f.ctrl & 0x2000) || f.sprites[i].pri) draw_sprite(f.sprites[i], 0, H);
+    for (int i = f.nsprites - 1; i >= 0; --i) {
+        const Sprite& s = f.sprites[i];
+        if ((f.ctrl & 0x2000) && !s.pri) continue;
+        draw_sprite(s, 0, H);
+        if (stage) extend_panorama(s);
+    }
     sprite_indices = nullptr;
 }
 #endif

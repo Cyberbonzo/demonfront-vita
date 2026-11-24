@@ -38,6 +38,6 @@ void render(uint32_t* rgba);
 // Indexed sprite coverage for the HD compositor. Bit 12 marks sprites behind the background.
 const uint8_t* background_tiles(int& count);
 const uint8_t* text_tiles();
-void sprite_layer(const Frame& frame, uint16_t* indices);
+void sprite_layer(const Frame& frame, uint16_t* indices, bool stage);
 #endif              // snapshot + render (desktop convenience)
 }
